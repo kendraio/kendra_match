@@ -1,0 +1,319 @@
+<?php
+
+/**
+ * @file
+ * Installation file for the Kendra Match module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function kendra_match_schema() {
+  $schema = array(
+      // recommendations: input
+      'kendra_match_recommender_in_values' => array(
+        'description' => 'recommender_in_values',
+        'fields' => array(
+            'rec_id' => array(
+              'description' => 'recommendation id',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'uid' => array(
+              'description' => 'User ID',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'nid' => array(
+              'description' => 'The primary identifier for a node.',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'type' => array(
+              'description' => 'recommendation type',
+              'type' => 'varchar',
+              'length' => '255',
+              'not null' => TRUE,
+            ),
+            'floatval' => array(
+              'description' => 'floating point value, if applicable',
+              'type' => 'float',
+              'unsigned' => FALSE,
+              'not null' => FALSE,
+            ),
+            'stringval' => array(
+              'description' => 'string value, if applicable',
+              'type' => 'text',
+              'size' => 'tiny', 
+              'not null' => FALSE,
+            ),
+            'external_id' => array(
+              'description' => '',
+              'type' => 'varchar',
+              'length' => '255',
+              'not null' => FALSE,
+            ),
+            'source' => array(
+              'description' => 'the source of the recommendation, implicit or explicit',
+              'type' => 'varchar',
+              'length' => '10',
+              'not null' => FALSE,
+            ),
+            // @FIXME
+            'time' => array(
+              'description' => '',
+              'type' => 'int',//CURRENT_TIMESTAMP
+              'not null' => TRUE,
+              'default' => 0,
+            ),
+        ),
+        'primary key' => array('rec_id'),
+        'foreign keys' => array(
+          'uid' => array(
+            'table' => 'users',
+            'columns' => array('uid' => 'uid'),
+          ),
+          'nid' => array(
+            'table' => 'node',
+            'columns' => array('nid' => 'nid'),
+          ),
+        ),
+        'indexes' => array(
+          'index_key' => array('rec_id'),
+        ),
+      ),
+
+      // recommendations: item-item
+      'kendra_match_recommender_out_item_to_item' => array(
+        'description' => 'recommender_out_item_to_item',
+        'fields' => array(
+            'rec_id' => array(
+              'description' => 'recommendation id',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'nid' => array(
+              'description' => 'subject node',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'recommended_nid' => array(
+              'description' => 'object node for similarity',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'weight' => array(
+              'description' => '',
+              'type' => 'float',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'source' => array(
+              'description' => 'the source of the recommendation',
+              'type' => 'varchar',
+              'length' => '10',
+              'not null' => FALSE,
+            ),
+            // @FIXME
+            'time' => array(
+              'description' => '',
+              'type' => 'int',//CURRENT_TIMESTAMP
+              'not null' => TRUE,
+              'default' => 0,
+            ),
+        ),
+        'primary key' => array('rec_id'),
+        'foreign keys' => array(
+          'nid' => array(
+            'table' => 'node',
+            'columns' => array('nid' => 'nid'),
+          ),
+          'recommended_nid' => array(
+            'table' => 'node',
+            'columns' => array('recommended_nid' => 'nid'),
+          ),
+        ),
+        'indexes' => array(
+          'index_key' => array('rec_id'),
+        ),
+      ),
+
+      // recommendations: user-item
+      'kendra_match_recommender_out_user_to_item' => array(
+        'description' => 'recommender_out_user_to_item',
+        'fields' => array(
+            'rec_id' => array(
+              'description' => 'recommendation id',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'uid' => array(
+              'description' => 'User ID',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => FALSE,
+            ),
+            'recommended_nid' => array(
+              'description' => 'The primary identifier for a node.',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'weight' => array(
+              'description' => '',
+              'type' => 'float',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'source' => array(
+              'description' => 'the source of the recommendation',
+              'type' => 'varchar',
+              'length' => '10',
+              'not null' => FALSE,
+            ),
+            // @FIXME
+            'time' => array(
+              'description' => '',
+              'type' => 'int',//CURRENT_TIMESTAMP
+              'not null' => TRUE,
+              'default' => 0,
+            ),
+        ),
+        'primary key' => array('rec_id'),
+        'foreign keys' => array(
+          'uid' => array(
+            'table' => 'users',
+            'columns' => array('uid' => 'uid'),
+          ),
+          'recommended_nid' => array(
+            'table' => 'node',
+            'columns' => array('recommended_nid' => 'nid'),
+          ),
+        ),
+        'indexes' => array(
+          'index_key' => array('recommender_out_user_to_item_id'),
+        ),
+      ),
+
+      // recommendations: user-user
+      'kendra_match_recommender_out_user_to_user' => array(
+        'description' => 'recommender_out_user_to_user',
+        'fields' => array(
+            'rec_id' => array(
+              'description' => 'recommendation id',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'uid' => array(
+              'description' => 'User ID',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => FALSE,
+            ),
+            'recommended_uid' => array(
+              'description' => 'User ID',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => FALSE,
+            ),
+            'weight' => array(
+              'description' => '',
+              'type' => 'float',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'source' => array(
+              'description' => 'the source of the recommendation',
+              'type' => 'varchar',
+              'length' => '10',
+              'not null' => FALSE,
+            ),
+            // @FIXME
+            'time' => array(
+              'description' => '',
+              'type' => 'int',//CURRENT_TIMESTAMP
+              'not null' => TRUE,
+              'default' => 0,
+            ),
+        ),
+        'primary key' => array('rec_id'),
+        'foreign keys' => array(
+          'uid' => array(
+            'table' => 'users',
+            'columns' => array('uid' => 'uid'),
+          ),
+          'recommended_uid' => array(
+            'table' => 'node',
+            'columns' => array('recommended_uid' => 'uid'),
+          ),
+        ),
+        'indexes' => array(
+          'index_key' => array('recommender_out_user_to_user_id'),
+        ),
+      ),
+
+      // recommendations: profile tags
+      'kendra_match_recommender_out_tags' => array(
+        'description' => 'recommender_out_tags',
+        'fields' => array(
+            'rec_id' => array(
+              'description' => 'recommendation id',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'uid' => array(
+              'description' => 'User ID',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => FALSE,
+            ),
+            'tag' => array(
+              'description' => '',
+              'type' => 'text',
+              'size' => 'tiny', 
+              'not null' => TRUE,
+            ),
+            'weight' => array(
+              'description' => '',
+              'type' => 'float',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+            ),
+            'source' => array(
+              'description' => 'the source of the recommendation',
+              'type' => 'varchar',
+              'length' => '10',
+              'not null' => FALSE,
+            ),
+            // @FIXME
+            'time' => array(
+              'description' => '',
+              'type' => 'int',//CURRENT_TIMESTAMP
+              'not null' => TRUE,
+              'default' => 0,
+            ),
+        ),
+        'primary key' => array('rec_id'),
+        'foreign keys' => array(
+          'uid' => array(
+            'table' => 'users',
+            'columns' => array('uid' => 'uid'),
+          ),
+        ),
+        'indexes' => array(
+          'index_key' => array('rec_id'),
+        ),
+      ),
+  );
+
+  return $schema;
+}
