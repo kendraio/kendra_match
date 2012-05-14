@@ -8,7 +8,7 @@
 /**
  * Implements hook_schema().
  */
-function kendra_match_schema() {
+function kendra_match_recommender_schema() {
   $schema = array(
       // recommendations: input
       'kendra_match_recommender_in_values' => array(
@@ -198,7 +198,7 @@ function kendra_match_schema() {
           ),
         ),
         'indexes' => array(
-          'index_key' => array('recommender_out_user_to_item_id'),
+          'index_key' => array('rec_id'),
         ),
       ),
 
@@ -256,7 +256,7 @@ function kendra_match_schema() {
           ),
         ),
         'indexes' => array(
-          'index_key' => array('recommender_out_user_to_user_id'),
+          'index_key' => array('rec_id'),
         ),
       ),
 
