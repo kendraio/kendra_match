@@ -6,3 +6,4 @@ php = "5.2.4"
 version = "7.0"
 
 dependencies[] = recommender
+dependencies[] = async_command
