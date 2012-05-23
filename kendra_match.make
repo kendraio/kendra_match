@@ -14,7 +14,7 @@ projects[drupal][type] = core
 
 ;; dependencies
 projects[] = recommender
-;projects[] = async_command
+projects[] = async_command
 
 ;; Kendra Match modules
 ;projects[kendra_match][subdir] = features
