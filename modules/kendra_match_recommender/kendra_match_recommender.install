@@ -61,12 +61,14 @@ function kendra_match_recommender_schema() {
               'length' => '10',
               'not null' => FALSE,
             ),
+            /**** 'timestamp' type is not yet supported in schema API...
             'time' => array(
               'description' => '',
               'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
+            */
         ),
         'primary key' => array('rec_id'),
         'foreign keys' => array(
@@ -118,12 +120,14 @@ function kendra_match_recommender_schema() {
               'length' => '10',
               'not null' => FALSE,
             ),
+            /**** 'timestamp' type is not yet supported in schema API...
             'time' => array(
               'description' => '',
               'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
+            */
         ),
         'primary key' => array('rec_id'),
         'foreign keys' => array(
@@ -175,12 +179,14 @@ function kendra_match_recommender_schema() {
               'length' => '10',
               'not null' => FALSE,
             ),
+            /**** 'timestamp' type is not yet supported in schema API...
             'time' => array(
               'description' => '',
               'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
+            */
         ),
         'primary key' => array('rec_id'),
         'foreign keys' => array(
@@ -232,12 +238,14 @@ function kendra_match_recommender_schema() {
               'length' => '10',
               'not null' => FALSE,
             ),
+            /**** 'timestamp' type is not yet supported in schema API...
             'time' => array(
               'description' => '',
               'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
+            */
         ),
         'primary key' => array('rec_id'),
         'foreign keys' => array(
@@ -288,12 +296,14 @@ function kendra_match_recommender_schema() {
               'length' => '10',
               'not null' => FALSE,
             ),
+            /**** 'timestamp' type is not yet supported in schema API...
             'time' => array(
               'description' => '',
               'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
+            */
         ),
         'primary key' => array('rec_id'),
         'foreign keys' => array(
@@ -464,19 +474,26 @@ function kendra_match_recommender_schema() {
   return $schema;
 }
 
+/**
+* add fields unsupported by Schema API
+* see http://drupal.org/node/1408736
+*/
 function kendra_match_recommender_install() {
-// Create tables
-db_query("
-    CREATE TABLE {timestamp} (
-    `id` INT(11) NOT NULL,
-    `timestamp` NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE NOW(),
-    PRIMARY KEY (id),
-    INDEX id (id)
-    )
-    ");
+    $tables_to_alter = array(
+        'kendra_match_recommender_in_values', 
+        'kendra_match_recommender_out_item_to_item', 
+        'kendra_match_recommender_out_tags', 
+        'kendra_match_recommender_out_user_to_item', 
+        'kendra_match_recommender_out_user_to_user'
+    );
+    
+    foreach ($tables_to_alter as $table) {
+        db_query(sprintf('ALTER TABLE {$table} ADD `time` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $table));
+        db_query(sprintf('ALTER TABLE {$table} ADD INDEX ( `time` )', $table));
+    }
 }
 
+/**
+*/
 function kendra_match_recommender_uninstall() {
-    // Drop tables
-    db_query("DROP TABLE {timestamp}");
 }
