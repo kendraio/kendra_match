@@ -1,0 +1,20 @@
+; -------------
+name = Kendra Match
+description = Set up a hub for social networking in minutes!
+core = 7.x
+; -------------
+;files =
+; -------------
+; Core
+; -------------
+
+; -------------
+; Features
+; -------------
+dependencies[] = kendra_match_recommender
+
+; -------------
+; Contrib
+; -------------
+dependencies[] = rdfx
+dependencies[] = sparql
