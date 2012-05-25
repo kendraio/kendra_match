@@ -63,7 +63,7 @@ function kendra_match_recommender_schema() {
             ),
             'time' => array(
               'description' => '',
-              'type' => 'timestamp',
+              'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
@@ -120,7 +120,7 @@ function kendra_match_recommender_schema() {
             ),
             'time' => array(
               'description' => '',
-              'type' => 'timestamp',
+              'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
@@ -177,7 +177,7 @@ function kendra_match_recommender_schema() {
             ),
             'time' => array(
               'description' => '',
-              'type' => 'timestamp',
+              'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
@@ -234,7 +234,7 @@ function kendra_match_recommender_schema() {
             ),
             'time' => array(
               'description' => '',
-              'type' => 'timestamp',
+              'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
@@ -290,7 +290,7 @@ function kendra_match_recommender_schema() {
             ),
             'time' => array(
               'description' => '',
-              'type' => 'timestamp',
+              'mysql_type' => 'timestamp',
               'not null' => TRUE,
               'default' => 'CURRENT_TIMESTAMP',
             ),
@@ -462,4 +462,21 @@ function kendra_match_recommender_schema() {
   );
 
   return $schema;
+}
+
+function kendra_match_recommender_install() {
+// Create tables
+db_query("
+    CREATE TABLE {timestamp} (
+    `id` INT(11) NOT NULL,
+    `timestamp` NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE NOW(),
+    PRIMARY KEY (id),
+    INDEX id (id)
+    )
+    ");
+}
+
+function kendra_match_recommender_uninstall() {
+    // Drop tables
+    db_query("DROP TABLE {timestamp}");
 }
