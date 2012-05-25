@@ -488,8 +488,8 @@ function kendra_match_recommender_install() {
     );
     
     foreach ($tables_to_alter as $table) {
-        db_query(sprintf('ALTER TABLE {$table} ADD `time` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $table));
-        db_query(sprintf('ALTER TABLE {$table} ADD INDEX ( `time` )', $table));
+        db_query(sprintf('ALTER TABLE {%s} ADD `time` TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', $table));
+        db_query(sprintf('ALTER TABLE {%s} ADD INDEX ( `time` )', $table));
     }
 }
 
