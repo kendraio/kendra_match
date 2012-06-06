@@ -30,7 +30,7 @@ function kendra_match_recommender_schema() {
               'description' => 'The primary identifier for a node.',
               'type' => 'int',
               'unsigned' => TRUE,
-              'not null' => TRUE,
+              'not null' => FALSE,
             ),
             'type' => array(
               'description' => 'recommendation type',
