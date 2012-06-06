@@ -89,7 +89,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $result = db_query($sql);
 
   foreach ($result as $node) {
-    $results[] = node_load($node->recommended_nid);
+    $results[] = _kendra_saracen_trial_mod_get_mediaitem($node->recommended_nid);
   }
 
   return $results;
@@ -114,7 +114,7 @@ function _kendra_match_recommender_search_users($query = NULL, $filter = NULL, $
  * search content
  */
 function _kendra_match_recommender_search_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
-  $results = array();
+  $search_results = array();
   $search_allowed_types = array('mediaitem');
   $safe_query = check_plain($query);
   $safe_sort = check_plain($sort);
@@ -124,6 +124,9 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   $safe_query .= ' type:' . join(',', $search_allowed_types);
   
   // Invoke the search hook to generate results.
-  $results = module_invoke('node', 'search_execute', $safe_query);
+  $search_results = module_invoke('node', 'search_execute', $safe_query);
+  foreach ($search_results as $result) {
+    $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
+  }
   return $results;
 }
