@@ -66,6 +66,7 @@ function _kendra_match_recommender_recommend_users($query = NULL, $filter = NULL
 
 /**
  * pull recommended content from `kendra_match_recommender_out_user_to_item` for the current user
+ * @todo filter by user preferences
  */
 function _kendra_match_recommender_recommend_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 3) {
   $results     = array();
@@ -111,7 +112,22 @@ function _kendra_match_recommender_search_users($query = NULL, $filter = NULL, $
 }
 
 /**
+* helper function to get the leaf value of a multilingual Drupal object
+*/
+function _drupal_object_get_value(&$obj) {
+    foreach ($outer as $lc => $arr) {
+          foreach ($arr as $inner) {
+              if (property_exists($inner, $value)) {
+                  return $inner->value;
+              }
+          }
+      }
+      return null;
+}
+
+/**
  * search content
+ * @todo filter by user preferences
  */
 function _kendra_match_recommender_search_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
   $search_results = array();
@@ -119,15 +135,71 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   $search_allowed_types = array('mediaitem');
   $safe_query = check_plain($query);
   $safe_sort = check_plain($sort);
-  $safe_filter = check_plain($filter);
+  $safe_filter = _kendra_match_recommender_search_preferences();
+  
+  if (!empty($filter)) {
+      $filter = drupal_json_decode($filter,1);
+      $safe_filter = array_merge($safe_filter, $filter);
+  }
 
   // restrict content types in search results
   $safe_query .= ' type:' . join(',', $search_allowed_types);
-  
+
   // Invoke the search hook to generate results.
   $search_results = module_invoke('node', 'search_execute', $safe_query);
   foreach ($search_results as $result) {
-    $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
+      if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
+          $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
+      }
   }
   return $results;
+}
+
+/**
+* filter node set according to user's prefs
+* @todo maybe this should be done as parameters to search_execute
+*/
+function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
+    $pass = true;
+    
+    if ( $prefs['friends-content'] ) {
+        // @todo
+    }
+    if ( $prefs['friends-interacted'] ) {
+        // @todo
+    }
+    if ( ! $prefs['3d'] ) {
+        if (isset($node['node']->field_mediaitem_3d)) {
+            $val = _drupal_object_get_value($node['node']->field_mediaitem_3d);
+            if ($val === false) {
+                return false;
+            }
+        }
+    }
+    if ($prefs['3d-only']) {
+        if (isset($node['node']->field_mediaitem_3d)) {
+            $val = _drupal_object_get_value($node['node']->field_mediaitem_3d);
+            if ($val !== true) {
+                return false;
+            }
+        }
+    }
+
+    return $pass;
+}
+
+/**
+* get the current user's search preferences
+* @todo override defaults with current user's prefs
+*/
+function _kendra_match_recommender_search_preferences() {
+    global $user;
+    $defaults = array(
+        'friends-content' => false,
+        'friends-interacted' => false,
+        '3d' => true,
+        '3d-only' => false,
+    );
+    
+    return $defaults;
 }
