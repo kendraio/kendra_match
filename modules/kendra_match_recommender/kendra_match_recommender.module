@@ -1,5 +1,33 @@
 <?php
 
+function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
+  $results = array();
+  switch (strtolower($type)) {
+    case 'mediaitem':
+    case 'mediaitems':
+      if (empty($query)) {
+        $results = _kendra_match_recommender_recommend_content($query, $filter, $sort, $page, $page_size);
+      }
+      else {
+        $results = _kendra_match_recommender_search_content($query, $filter, $sort, $page, $page_size);
+      }
+      break;
+
+    case 'user':
+      if (empty($query)) {
+        $results = _kendra_match_recommender_recommend_users($query, $filter, $sort, $page, $page_size);
+      }
+      else {
+        $results = _kendra_match_recommender_search_users($query, $filter, $sort, $page, $page_size);
+      }
+      break;
+
+    default:
+      // echo input
+      $results = compact('type', 'query', 'filter', 'sort');
+  }
+  return $results;
+}
 
 /**
  * pull recommended users from `kendra_match_recommender_out_user_to_user` for the current user
