@@ -96,7 +96,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
   switch ($safe_sort) {
     case 'rating':
-      $fields .= 'nid';
+      $fields .= 'nid AS id';
       $from .= '{node} node';
       $joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
       $where .= sprintf(' AND vv.uid = %d AND vv.tag = "vote"', $uid);
@@ -104,16 +104,17 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       break;
 
     case 'updated':
-      $fields .= 'nid';
+      $fields .= 'nid AS id';
       $from .= '{node} node';
       $order .= 'node.changed DESC';
       break;
 
     case 'affinity':
     default:
-      $fields .= 'DISTINCT recommended_nid';
-      $from .= '{kendra_match_recommender_out_user_to_item} recommendations';
-      $where .= sprintf(' AND uid = %d AND NOT ISNULL(recommendations.recommended_nid)', $uid);
+      $fields .= 'DISTINCT nid AS id';
+      $from .= '{node} node';
+      $joins .= 'INNER JOIN {kendra_match_recommender_out_user_to_item} recommendations ON recommendations.recommended_nid=node.nid';
+      $where .= sprintf(' AND recommendations.uid = %d AND NOT ISNULL(recommendations.recommended_nid)', $uid);
       $order .= 'weight DESC, time DESC';
       break;
   }
@@ -129,7 +130,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
   foreach ($search_results as $result) {
     if (_kendra_match_recommender_filter_content_by_prefs($result->node, $safe_filter)) {
-      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->recommended_nid);
+      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->id);
     }
   }
 
