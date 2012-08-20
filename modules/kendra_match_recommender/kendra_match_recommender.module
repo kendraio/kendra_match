@@ -100,14 +100,14 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $fields .= 'node.nid AS id, node.type';
       $joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
       $where .= ' AND node.type = "mediaitem"';
-      $where .= sprintf(' AND vv.uid = %d AND vv.tag = "vote"', $uid);
+      $where .= sprintf(' AND node.type = %s', db_placeholders('mediaitem', 'varchar'));
       $order .= 'vv.value DESC';
       break;
 
     case 'updated':
       $fields .= 'node.nid AS id, node.type';
       $from .= '{node} node';
-      $where .= ' AND node.type = "mediaitem"';
+      $where .= sprintf(' AND node.type = %s', db_placeholders('mediaitem', 'varchar'));
       $order .= 'node.changed DESC';
       break;
 
@@ -116,11 +116,12 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $fields .= 'DISTINCT node.nid AS id, node.type';
       $from .= '{node} node';
       $joins .= 'INNER JOIN {kendra_match_recommender_out_user_to_item} recommendations ON recommendations.recommended_nid=node.nid';
-      $where .= ' AND node.type = "mediaitem"';
+      $where .= sprintf(' AND node.type = %s', db_placeholders('mediaitem', 'varchar'));
       $where .= sprintf(' AND recommendations.uid = %d AND NOT ISNULL(recommendations.recommended_nid)', $uid);
       $order .= 'weight DESC, time DESC';
       break;
   }
+  
 
   $sql = sprintf("SELECT %s FROM %s %s
       WHERE %s
@@ -128,6 +129,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       LIMIT %s, %s
       ", $fields, $from, $joins, $where, $order, $page, $page_size);
 
+  watchdog('sql dev', $sql);
   $search_results = db_query($sql);
 
   foreach ($search_results as $result) {
@@ -250,4 +252,3 @@ function _kendra_match_recommender_search_preferences() {
 
   return $defaults;
 }
-
