@@ -1,18 +1,15 @@
 <?php
-
-function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
-  $results = array();
-  switch (strtolower($type)) {
-    case 'mediaitem':
-    case 'mediaitems':
-      if (empty($query)) {
-        $results = _kendra_match_recommender_recommend_content($query, $filter, $sort, $page, $page_size);
+function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) { $results = array();
+switch (strtolower($type)) {
+  case 'mediaitem':
+  case 'mediaitems':
+    if (empty($query)) {
+      $results = _kendra_match_recommender_recommend_content($query, $filter, $sort, $page, $page_size);
       }
       else {
         $results = _kendra_match_recommender_search_content($query, $filter, $sort, $page, $page_size);
       }
       break;
-
     case 'user':
       if (empty($query)) {
         $results = _kendra_match_recommender_recommend_users($query, $filter, $sort, $page, $page_size);
@@ -69,28 +66,67 @@ function _kendra_match_recommender_recommend_users($query = NULL, $filter = NULL
  * @todo filter by user preferences
  */
 function _kendra_match_recommender_recommend_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 3) {
-  $results     = array();
-  $safe_query  = check_plain($query);
-  $safe_sort   = check_plain($sort);
-  $safe_filter = check_plain($filter);
-
-  //@FIXME: override paging vars, that appear to be NULL
-  $page = 0;
-  $page_size = 3;
-
   global $user;
   $uid = $user->uid;
 
-  $sql = sprintf("SELECT DISTINCT recommended_nid FROM {kendra_match_recommender_out_user_to_item}
-      WHERE uid = %d AND NOT ISNULL(recommended_nid)
-      ORDER BY weight
-      DESC, time DESC LIMIT %s, %s
-      ", $uid, $page, $page_size);
+  $search_results      = array();
+  $sort_allowed_values = array('affinity', 'rating', 'updated');
+  $results             = array();
+  $safe_query          = check_plain($query);
+  $safe_sort           = check_plain($sort);
+  $safe_filter         = _kendra_match_recommender_search_preferences();
 
-  $result = db_query($sql);
+  if (!empty($filter)) {
+    $filter = drupal_json_decode($filter, 1);
+    $safe_filter = array_merge($safe_filter, $filter);
+  }
 
-  foreach ($result as $node) {
-    $results[] = _kendra_saracen_trial_mod_get_mediaitem($node->recommended_nid);
+  //@FIXME: override paging vars, that appear to be NULL
+  $page      = 0;
+  $page_size = 3;
+  $from      = '';
+  $joins     = '';
+  $where     = '0=0';
+  $order     = '';
+
+  if (!in_array($safe_sort, $sort_allowed_values)) {
+    $safe_sort = '';
+  }
+
+  switch ($safe_sort) {
+    case 'rating':
+      $from .= '{node} node';
+      $joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
+      $where .= sprintf(' AND vv.uid = %d AND vv.tag = "vote"', $uid);
+      $order .= 'vv.value DESC, weight DESC, time DESC';
+      break;
+
+    case 'updated':
+      $from .= '{node} node';
+      $order .= 'node.changed DESC, weight DESC, time DESC';
+      break;
+
+    case 'affinity':
+    default:
+      $from .= '{kendra_match_recommender_out_user_to_item} recommendations';
+      $where .= sprintf(' AND uid = %d AND NOT ISNULL(recommended_nid)', $uid);
+      $order .= 'weight DESC, time DESC';
+      break;
+  }
+
+  $sql = sprintf("SELECT DISTINCT recommended_nid
+      FROM %s %s
+      WHERE %s
+      ORDER BY %s
+      LIMIT %s, %s
+      ", $from, $joins, $where, $order, $page, $page_size);
+
+  $search_results = db_query($sql);
+
+  foreach ($search_results as $result) {
+    if (_kendra_match_recommender_filter_content_by_prefs($result['node'], $safe_filter)) {
+      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->recommended_nid);
+    }
   }
 
   return $results;
@@ -100,10 +136,10 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
  * search users
  */
 function _kendra_match_recommender_search_users($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
-  $search_results     = array();
-  $safe_query  = check_plain($query);
-  $safe_sort   = check_plain($sort);
-  $safe_filter = check_plain($filter);
+  $search_results = array();
+  $safe_query     = check_plain($query);
+  $safe_sort      = check_plain($sort);
+  $safe_filter    = check_plain($filter);
 
   // Invoke the search hook to generate results
   // @todo incorporate $safe_sort, $safe_filter
@@ -112,17 +148,17 @@ function _kendra_match_recommender_search_users($query = NULL, $filter = NULL, $
 }
 
 /**
-* helper function to get the leaf value of a multilingual Drupal object
-*/
+ * helper function to get the leaf value of a multilingual Drupal object
+ */
 function _drupal_object_get_value(&$obj) {
-    foreach ($outer as $lc => $arr) {
-          foreach ($arr as $inner) {
-              if (property_exists($inner, $value)) {
-                  return $inner->value;
-              }
-          }
+  foreach ($outer as $lc => $arr) {
+    foreach ($arr as $inner) {
+      if (property_exists($inner, $value)) {
+        return $inner->value;
       }
-      return null;
+    }
+  }
+  return NULL;
 }
 
 /**
@@ -130,16 +166,20 @@ function _drupal_object_get_value(&$obj) {
  * @todo filter by user preferences
  */
 function _kendra_match_recommender_search_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
+  global $user;
+  $uid = $user->uid;
+
   $search_results = array();
+  $sort_allowed_values = array('affinity', 'rating', 'updated');
   $results = array();
   $search_allowed_types = array('mediaitem');
   $safe_query = check_plain($query);
   $safe_sort = check_plain($sort);
   $safe_filter = _kendra_match_recommender_search_preferences();
-  
+
   if (!empty($filter)) {
-      $filter = drupal_json_decode($filter,1);
-      $safe_filter = array_merge($safe_filter, $filter);
+    $filter = drupal_json_decode($filter, 1);
+    $safe_filter = array_merge($safe_filter, $filter);
   }
 
   // restrict content types in search results
@@ -148,58 +188,59 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   // Invoke the search hook to generate results.
   $search_results = module_invoke('node', 'search_execute', $safe_query);
   foreach ($search_results as $result) {
-      if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
-          $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
-      }
+    if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
+      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->nid);
+    }
   }
   return $results;
 }
 
 /**
-* filter node set according to user's prefs
-* @todo maybe this should be done as parameters to search_execute
-*/
+ * filter node set according to user's prefs
+ * @todo maybe this should be done as parameters to search_execute
+ */
 function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
-    $pass = true;
-    
-    if ( $prefs['friends-content'] ) {
-        // @todo
-    }
-    if ( $prefs['friends-interacted'] ) {
-        // @todo
-    }
-    if ( ! $prefs['3d'] ) {
-        if (isset($node['node']->field_mediaitem_3d)) {
-            $val = _drupal_object_get_value($node['node']->field_mediaitem_3d);
-            if ($val === false) {
-                return false;
-            }
-        }
-    }
-    if ($prefs['3d-only']) {
-        if (isset($node['node']->field_mediaitem_3d)) {
-            $val = _drupal_object_get_value($node['node']->field_mediaitem_3d);
-            if ($val !== true) {
-                return false;
-            }
-        }
-    }
+  $pass = TRUE;
 
-    return $pass;
+  if ($prefs['friends-content']) {
+    // @todo
+  }
+  if ($prefs['friends-interacted']) {
+    // @todo
+  }
+  if (!$prefs['3d']) {
+    if (isset($node->field_mediaitem_3d)) {
+      $val = _drupal_object_get_value($node->field_mediaitem_3d);
+      if ($val === FALSE) {
+        return FALSE;
+      }
+    }
+  }
+  if ($prefs['3d-only']) {
+    if (isset($node->field_mediaitem_3d)) {
+      $val = _drupal_object_get_value($node->field_mediaitem_3d);
+      if ($val !== TRUE) {
+        return FALSE;
+      }
+    }
+  }
+
+  return $pass;
 }
 
 /**
-* get the current user's search preferences
-* @todo override defaults with current user's prefs
-*/
+ * get the current user's search preferences
+ * @todo override defaults with current user's prefs
+ */
 function _kendra_match_recommender_search_preferences() {
-    global $user;
-    $defaults = array(
-        'friends-content' => false,
-        'friends-interacted' => false,
-        '3d' => true,
-        '3d-only' => false,
-    );
-    
-    return $defaults;
+  global $user;
+  $defaults = array(
+    'friends-content' => FALSE,
+    'friends-interacted' => FALSE,
+    '3d' => TRUE,
+    '3d-only' => FALSE,
+  );
+
+  return $defaults;
 }
+
