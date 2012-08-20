@@ -128,7 +128,6 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       LIMIT %s, %s
       ", $fields, $from, $joins, $where, $order, $page, $page_size);
 
-  die($sql);
   $search_results = db_query($sql);
 
   foreach ($search_results as $result) {
