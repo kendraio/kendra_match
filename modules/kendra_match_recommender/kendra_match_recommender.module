@@ -97,7 +97,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   switch ($safe_sort) {
     case 'rating':
       $fields .= 'nid AS id';
-      $from .= '{node} node';
+      $fields .= 'node.nid AS id, node.type';
       $joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
       $where .= ' AND node.type = "mediaitem"';
       $where .= sprintf(' AND vv.uid = %d AND vv.tag = "vote"', $uid);
@@ -105,7 +105,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       break;
 
     case 'updated':
-      $fields .= 'nid AS id';
+      $fields .= 'node.nid AS id, node.type';
       $from .= '{node} node';
       $where .= ' AND node.type = "mediaitem"';
       $order .= 'node.changed DESC';
@@ -113,7 +113,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
     case 'affinity':
     default:
-      $fields .= 'DISTINCT nid AS id';
+      $fields .= 'DISTINCT node.nid AS id, node.type';
       $from .= '{node} node';
       $joins .= 'INNER JOIN {kendra_match_recommender_out_user_to_item} recommendations ON recommendations.recommended_nid=node.nid';
       $where .= ' AND node.type = "mediaitem"';
@@ -122,13 +122,13 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       break;
   }
 
-  $sql = sprintf("SELECT %s
-      FROM %s %s
+  $sql = sprintf("SELECT %s FROM %s %s
       WHERE %s
       ORDER BY %s
       LIMIT %s, %s
       ", $fields, $from, $joins, $where, $order, $page, $page_size);
 
+  die($sql);
   $search_results = db_query($sql);
 
   foreach ($search_results as $result) {
