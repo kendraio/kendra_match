@@ -98,7 +98,8 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     case 'rating':
       $fields .= 'nid AS id';
       $from .= '{node} node';
-      $joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
+      //$joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
+      $joins .= 'INNER JOIN {votingapi_cache} vv ON vv.entity_id=node.nid';
       $where .= " AND node.type = 'mediaitem'";
       //$where .= sprintf(" AND vv.uid = %d AND vv.tag = 'vote'", $uid);
       $where .= " AND vv.tag = 'vote'";
