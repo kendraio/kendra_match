@@ -187,8 +187,10 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   $safe_filter = _kendra_match_recommender_search_preferences();
 
   if (!empty($filter)) {
-    $filter = drupal_json_decode($filter, 1);
-    $safe_filter = array_merge($safe_filter, $filter);
+    $filter = drupal_json_decode($filter);
+    if (is_array($filter)) {
+      $safe_filter = array_merge($safe_filter, $filter);
+    }
   }
 
   // restrict content types in search results
@@ -220,18 +222,20 @@ function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
   if (!$prefs['3d']) {
     if (isset($node->field_mediaitem_3d)) {
       $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if ($val === FALSE) {
+      if ($val == FALSE || strtolower($val) == 'no') {
         return FALSE;
       }
     }
   }
-  if ($prefs['3d-only']) {
+  if (strtolower($prefs['3d-only']) == 'true' || strtolower($prefs['3d-only']) == 'yes') {
     if (isset($node->field_mediaitem_3d)) {
       $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if ($val !== TRUE) {
+      if (!($val == TRUE || strtolower($val) == 'yes')) {
         return FALSE;
       }
     }
+  } else {
+    return FALSE;
   }
 
   return $pass;
