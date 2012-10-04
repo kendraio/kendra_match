@@ -198,7 +198,7 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   $search_results = module_invoke('node', 'search_execute', $safe_query);
   foreach ($search_results as $result) {
     if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
-      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->nid);
+      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
     }
   }
   return $results;
