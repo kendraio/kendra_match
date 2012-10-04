@@ -1,6 +1,5 @@
 <?php
-function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) { $results = array();
-switch (strtolower($type)) {
+function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) { $results = array(); switch (strtolower($type)) {
   case 'mediaitem':
   case 'mediaitems':
     if (empty($query)) {
@@ -219,26 +218,39 @@ function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
   if ($prefs['friends-interacted']) {
     // @todo
   }
-  if (!$prefs['3d']) {
+  if (!is_true($prefs['3d'])) {
     if (isset($node->field_mediaitem_3d)) {
       $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if ($val == FALSE || strtolower($val) == 'no') {
+      if (!is_true($val)) {
         return FALSE;
       }
     }
   }
-  if (strtolower($prefs['3d-only']) == 'true' || strtolower($prefs['3d-only']) == 'yes') {
+  if (is_true($prefs['3d-only'])) {
     if (isset($node->field_mediaitem_3d)) {
       $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if (!($val == TRUE || strtolower($val) == 'yes')) {
+      if (!is_true($val)) {
         return FALSE;
       }
     }
-  } else {
-    return FALSE;
+    else {
+      return FALSE;
+    }
   }
 
   return $pass;
+}
+
+function is_true($truthval) {
+  if ($truthval === TRUE) return $truthval;
+  switch (strtolower($truthval)) {
+    case 'yes':
+    case 'true':
+    case '1':
+    return true;
+    default:
+    return false;
+  }
 }
 
 /**
@@ -256,3 +268,4 @@ function _kendra_match_recommender_search_preferences() {
 
   return $defaults;
 }
+
