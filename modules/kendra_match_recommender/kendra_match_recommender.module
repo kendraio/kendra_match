@@ -1,5 +1,6 @@
 <?php
-function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) { $results = array(); switch (strtolower($type)) {
+function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
+  $results = array(); switch (strtolower($type)) {
   case 'mediaitem':
   case 'mediaitems':
     if (empty($query)) {
@@ -204,10 +205,17 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
 
 /**
  * filter node set according to user's prefs
- * @todo maybe this should be done as parameters to search_execute
+ * @todo maybe this could be done as parameters to search_execute
  */
 function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
   $pass = TRUE;
+  global $user;
+  $uid = !empty($user) ? $user->uid : null;
+  
+  // remove unpublished content not owned by the user
+  if ( !($node['node']->status == 1 || $node['node']->uid == $uid) ) {
+    return FALSE;
+  }
 
   if ($prefs['friends-content']) {
     // @todo
