@@ -206,6 +206,9 @@ function _kendra_match_recommender_search_content($query = NULL, $filter = NULL,
   $safe_sort = check_plain($sort);
   $safe_filter = _kendra_match_recommender_search_preferences();
 
+  // Add keyword to implicit profile
+  _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
+
   if (!empty($filter)) {
     $filter = drupal_json_decode($filter);
     if (is_array($filter)) {
