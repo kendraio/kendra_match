@@ -130,8 +130,9 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     default:
       $fields .= 'nid AS id';
       //$joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
-      $joins .= 'LEFT JOIN {votingapi_cache} vv ON vv.entity_id=node.nid AND vv.tag="vote"';
+      $joins .= 'INNER JOIN {votingapi_cache} vv ON vv.entity_id=node.nid';
       //$where .= sprintf(" AND vv.uid = %d AND vv.tag = 'vote'", $uid);
+      $where .= " AND vv.tag = 'vote'";
       $order .= 'vv.value DESC, node.changed DESC';
       break;
 
