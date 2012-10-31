@@ -88,7 +88,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $uid = $user->uid;
 
   $search_results      = array();
-  $sort_allowed_values = array('affinity', 'rating', 'updated');
+  $sort_allowed_values = array('affinity', 'rating', 'updated', 'newest', 'watched');
   $results             = array();
   $safe_query          = check_plain($query);
   $safe_sort           = check_plain($sort);
@@ -134,6 +134,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       break;
 
     case 'updated':
+    case 'newest':
       $fields .= 'DISTINCT node.nid AS id';
       $order .= 'node.changed DESC';
       break;
@@ -143,6 +144,10 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $joins .= sprintf('LEFT JOIN {kendra_match_recommender_out_user_to_item} recommendations
       ON (recommendations.recommended_nid=node.nid AND (recommendations.uid = %d or recommendations.uid IS NULL))', $uid);
       $order .= 'weight DESC, time DESC, node.changed DESC';
+      break;
+
+    case 'watched':
+      die("option not implemented");
       break;
   }
   
