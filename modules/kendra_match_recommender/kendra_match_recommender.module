@@ -98,7 +98,11 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $joins     = '';
   $where     = "(node.status=1 OR node.uid=$uid)";
   $order     = '';
-
+  
+  // @todo fix NULL parameters passed via querystring
+  if (!$page) $page = 0;
+  if (!$page_size) $page_size = 10;
+  
   if (!empty($filter)) {
     $filter = drupal_json_decode($filter, 1);
     $safe_filter = array_merge($safe_filter, $filter);
@@ -116,7 +120,9 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
   } else {
     $where .= " AND node.type='mediaitem'";
-    $safe_sort = 'affinity';
+    if (empty($safe_sort)) {
+      $safe_sort = 'affinity';
+    }
   }
 
   switch ($safe_sort) {
