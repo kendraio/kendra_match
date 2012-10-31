@@ -37,9 +37,30 @@ function _kendra_match_recommender_recommend_users($query = NULL, $filter = NULL
   global $user;
   $uid = $user->uid;
 
+  // #79 - show name, affinity and networks (link to add on that network)
+  $results = db_query("SELECT r.recommended_uid as uid, r.weight as affinity,
+    u.name as name, f.fbu as facebook
+    FROM {kendra_match_recommender_out_user_to_user} r
+    INNER JOIN {users} u ON u.uid = r.recommended_uid
+    LEFT JOIN {fb_user} f ON f.uid = r.recommended_uid
+    WHERE u.status = 1 and r.uid = :uid", array(':uid' => $uid));
+
+  //return $result->fetchAllAssoc('uid');
+  $rec = array();
+  foreach ($results->fetchAllAssoc('uid') as $r) {
+    if (!empty($r->facebook)) {
+      $r->networks['facebook'] = 'http://www.facebook.com/' . $r->facebook;
+    }
+    unset($r->facebook);
+    $rec[] = (array) $r;
+  }
+  return $rec;
+
+
+  // TODO: remove/refactor original code?
   $sql = sprintf("SELECT users.name, recommended_uid FROM {kendra_match_recommender_out_user_to_user}
-       INNER JOIN users ON users.uid=kendra_match_recommender_out_user_to_user.uid                                                                                                                                                                      
-       WHERE users.uid = %d and status = 1 
+       INNER JOIN users ON users.uid=kendra_match_recommender_out_user_to_user.uid
+       WHERE users.uid = %d and status = 1
        ORDER BY weight DESC, time DESC LIMIT %s, %s
        ", $uid, $page, $page_size);
 
@@ -51,7 +72,9 @@ function _kendra_match_recommender_recommend_users($query = NULL, $filter = NULL
     $uids[] = $node->recommended_uid;
   }
 
-  $results = user_load_multiple($uids);
+  //$results = user_load_multiple($uids);
+  $results = array();
+  return $uids;
 
   return $results;
 }
@@ -90,7 +113,11 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   }
 
   if (!empty($safe_query)) {
+    // add search clause
     $where .= sprintf(" AND node.type='mediaitem' AND node.title like '%%s%", $safe_query);
+    
+    // Add keyword to implicit profile
+    _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
   } else {
     $where .= " AND node.type='mediaitem'";
   }
@@ -166,6 +193,45 @@ function _drupal_object_get_value(&$obj) {
 }
 
 /**
+ * search content
+ * @todo filter by user preferences
+ */
+function _kendra_match_recommender_search_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
+  global $user;
+  $uid = $user->uid;
+
+  $search_results = array();
+  $sort_allowed_values = array('affinity', 'rating', 'updated');
+  $results = array();
+  $search_allowed_types = array('mediaitem');
+  $safe_query = check_plain($query);
+  $safe_sort = check_plain($sort);
+  $safe_filter = _kendra_match_recommender_search_preferences();
+
+  // Add keyword to implicit profile
+  _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
+
+  if (!empty($filter)) {
+    $filter = drupal_json_decode($filter);
+    if (is_array($filter)) {
+      $safe_filter = array_merge($safe_filter, $filter);
+    }
+  }
+
+  // restrict content types in search results
+  $safe_query .= ' type:' . join(',', $search_allowed_types);
+
+  // Invoke the search hook to generate results.
+  $search_results = module_invoke('node', 'search_execute', $safe_query);
+  foreach ($search_results as $result) {
+    if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
+      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
+    }
+  }
+  return $results;
+}
+
+/**
  * filter node set according to user's prefs
  * @todo maybe this could be done as parameters to search_execute
  */
@@ -173,7 +239,7 @@ function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
   $pass = TRUE;
   global $user;
   $uid = !empty($user) ? $user->uid : null;
-  
+
   // remove unpublished content not owned by the user
   if ( !($node['node']->status == 1 || $node['node']->uid == $uid) ) {
     return FALSE;
@@ -235,4 +301,3 @@ function _kendra_match_recommender_search_preferences() {
 
   return $defaults;
 }
-
