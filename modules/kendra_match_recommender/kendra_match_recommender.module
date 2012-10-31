@@ -114,22 +114,24 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
   if (!empty($safe_query)) {
     // add search clause
-    $where .= sprintf(" AND node.type='mediaitem' AND node.title like '%%s%", $safe_query);
+    $where .= sprintf(" AND node.type='mediaitem' AND node.title like '%%%s%%'", $safe_query);
     
     // Add keyword to implicit profile
     _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
   } else {
     $where .= " AND node.type='mediaitem'";
+    $safe_sort = 'affinity';
   }
 
   switch ($safe_sort) {
     case 'rating':
+    default:
       $fields .= 'nid AS id';
       //$joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
       $joins .= 'INNER JOIN {votingapi_cache} vv ON vv.entity_id=node.nid';
       //$where .= sprintf(" AND vv.uid = %d AND vv.tag = 'vote'", $uid);
       $where .= " AND vv.tag = 'vote'";
-      $order .= 'vv.value DESC';
+      $order .= 'vv.value DESC, node.changed DESC';
       break;
 
     case 'updated':
@@ -138,11 +140,10 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       break;
 
     case 'affinity':
-    default:
       $fields .= 'DISTINCT node.nid AS id';
       $joins .= 'INNER JOIN {kendra_match_recommender_out_user_to_item} recommendations ON recommendations.recommended_nid=node.nid';
       $where .= sprintf(' AND recommendations.uid = %d AND NOT ISNULL(recommendations.recommended_nid)', $uid);
-      $order .= 'weight DESC, time DESC';
+      $order .= 'weight DESC, time DESC, node.changed DESC';
       break;
   }
   
