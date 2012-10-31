@@ -150,7 +150,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $fields .= 'DISTINCT node.nid AS id';
       $joins .= ' INNER JOIN {field_data_field_mediaitem_identifier} mediaitem_identifier ON (mediaitem_identifier.entity_id=node.nid)';
       $joins .= ' LEFT JOIN {kendra_mediaitem_watch} watchlist ON (watchlist.media_id=mediaitem_identifier.entity_id)';
-      $joins .= ' GROUP BY nid'; 
+      $where .= ' GROUP BY nid'; 
       $order .= 'count(id) DESC, node.changed DESC';
       break;
   }
