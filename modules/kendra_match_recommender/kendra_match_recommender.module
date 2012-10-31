@@ -3,12 +3,7 @@ function _kendra_match_recommender_search_general($type = NULL, $query = NULL, $
   $results = array(); switch (strtolower($type)) {
   case 'mediaitem':
   case 'mediaitems':
-    if (empty($query)) {
       $results = _kendra_match_recommender_recommend_content($query, $filter, $sort, $page, $page_size);
-      }
-      else {
-        $results = _kendra_match_recommender_search_content($query, $filter, $sort, $page, $page_size);
-      }
       break;
     case 'user':
       if (empty($query)) {
@@ -94,12 +89,17 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     $safe_sort = '';
   }
 
+  if (!empty($safe_query)) {
+    $where .= sprintf(" AND node.type='mediaitem' AND node.title like '%%s%", $safe_query);
+  } else {
+    $where .= " AND node.type='mediaitem'";
+  }
+
   switch ($safe_sort) {
     case 'rating':
       $fields .= 'nid AS id';
       //$joins .= 'INNER JOIN {votingapi_vote} vv ON vv.entity_id=node.nid';
       $joins .= 'INNER JOIN {votingapi_cache} vv ON vv.entity_id=node.nid';
-      $where .= " AND node.type = 'mediaitem'";
       //$where .= sprintf(" AND vv.uid = %d AND vv.tag = 'vote'", $uid);
       $where .= " AND vv.tag = 'vote'";
       $order .= 'vv.value DESC';
@@ -107,7 +107,6 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
     case 'updated':
       $fields .= 'node.nid AS id';
-      $where .= " AND node.type = 'mediaitem'";
       $order .= 'node.changed DESC';
       break;
 
@@ -115,12 +114,11 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     default:
       $fields .= 'DISTINCT node.nid AS id';
       $joins .= 'INNER JOIN {kendra_match_recommender_out_user_to_item} recommendations ON recommendations.recommended_nid=node.nid';
-      $where .= " AND node.type = 'mediaitem'";
       $where .= sprintf(' AND recommendations.uid = %d AND NOT ISNULL(recommendations.recommended_nid)', $uid);
       $order .= 'weight DESC, time DESC';
       break;
   }
-
+  
   $sql = sprintf("SELECT %s FROM %s %s
       WHERE %s
       ORDER BY %s
@@ -165,42 +163,6 @@ function _drupal_object_get_value(&$obj) {
     }
   }
   return NULL;
-}
-
-/**
- * search content
- * @todo filter by user preferences
- */
-function _kendra_match_recommender_search_content($query = NULL, $filter = NULL, $sort = NULL, $page = 0, $page_size = 10) {
-  global $user;
-  $uid = $user->uid;
-
-  $search_results = array();
-  $sort_allowed_values = array('affinity', 'rating', 'updated');
-  $results = array();
-  $search_allowed_types = array('mediaitem');
-  $safe_query = check_plain($query);
-  $safe_sort = check_plain($sort);
-  $safe_filter = _kendra_match_recommender_search_preferences();
-
-  if (!empty($filter)) {
-    $filter = drupal_json_decode($filter);
-    if (is_array($filter)) {
-      $safe_filter = array_merge($safe_filter, $filter);
-    }
-  }
-
-  // restrict content types in search results
-  $safe_query .= ' type:' . join(',', $search_allowed_types);
-
-  // Invoke the search hook to generate results.
-  $search_results = module_invoke('node', 'search_execute', $safe_query);
-  foreach ($search_results as $result) {
-    if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
-      $results[] = _kendra_saracen_trial_mod_get_mediaitem($result['node']->nid);
-    }
-  }
-  return $results;
 }
 
 /**
