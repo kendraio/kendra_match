@@ -98,11 +98,11 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $joins     = '';
   $where     = "(node.status=1 OR node.uid=$uid)";
   $order     = '';
-  
+
   // @todo fix NULL parameters passed via querystring
   if (!$page) $page = 0;
   if (!$page_size) $page_size = 10;
-  
+
   if (!empty($filter)) {
     $filter = drupal_json_decode($filter, 1);
     $safe_filter = array_merge($safe_filter, $filter);
@@ -115,7 +115,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   if (!empty($safe_query)) {
     // add search clause
     $where .= sprintf(" AND node.type='mediaitem' AND node.title like '%%%s%%'", $safe_query);
-    
+
     // Add keyword to implicit profile
     _kendra_saracen_save_recommend($user->uid, NULL, 'keyword', $safe_query, FALSE, NULL, 'implicit');
   } else {
@@ -147,19 +147,19 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $fields .= 'DISTINCT node.nid AS id';
       $joins .= ' INNER JOIN {field_data_field_mediaitem_identifier} mediaitem_identifier ON (mediaitem_identifier.entity_id=node.nid)';
       $joins .= ' LEFT JOIN {kendra_mediaitem_watch} watchlist ON (watchlist.media_id=mediaitem_identifier.field_mediaitem_identifier_value)';
-      $where .= ' GROUP BY nid'; 
+      $where .= ' GROUP BY nid';
       $order .= 'count(id) DESC, node.changed DESC';
       break;
 
     case 'rating':
     default:
       $fields .= 'DISTINCT node.nid AS id';
-      $joins .= "LEFT JOIN {votingapi_cache} vv ON (vv.entity_id=node.nid AND (vv.tag = 'vote' OR vv.tag IS NULL))";
+      $joins .= "LEFT JOIN {votingapi_cache} vv ON (vv.entity_id=node.nid AND (vv.function = 'average' OR vv.tag IS NULL))";
       $order .= 'vv.value DESC, node.changed DESC';
       break;
 
   }
-  
+
   $sql = sprintf("SELECT %s FROM %s %s
       WHERE %s
       ORDER BY %s
