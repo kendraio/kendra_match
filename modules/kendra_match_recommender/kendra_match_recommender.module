@@ -160,7 +160,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
   }
 
-  $sql = sprintf("SELECT %s FROM %s %s
+  $sql = sprintf("SELECT %s , node.uid as uid FROM %s %s
       WHERE %s
       ORDER BY %s
       LIMIT %s, %s
@@ -169,7 +169,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $search_results = db_query($sql);
 
   foreach ($search_results as $result) {
-    if (_kendra_match_recommender_filter_content_by_prefs($result->node, $safe_filter)) {
+    if (_kendra_match_recommender_filter_content_by_prefs($result, $safe_filter)) {
       $results[] = _kendra_saracen_trial_mod_get_mediaitem($result->id);
     }
   }
@@ -216,10 +216,33 @@ function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
   $uid = !empty($user) ? $user->uid : null;
 
   if ($prefs['friends-content']) {
-    // @todo
+    // return false if not friends content
+    static $friends = array();
+    if (empty($friends)) {
+      $friends = db_query("SELECT data FROM {kendra_saracen_friends} WHERE uid = :uid",
+        array(':uid' => $uid))->fetchField();
+      $friends = unserialize($friends);
+    }
+    if (!in_array($node->uid, array_keys($friends))) {
+      return FALSE;
+    }
   }
   if ($prefs['friends-interacted']) {
-    // @todo
+    // return false if no friends have watched content
+    static $friends = array();
+    if (empty($friends)) {
+      $friends = db_query("SELECT data FROM {kendra_saracen_friends} WHERE uid = :uid",
+        array(':uid' => $uid))->fetchField();
+      $friends = unserialize($friends);
+    }
+    $watchers = db_query("SELECT w.uid FROM {kendra_mediaitem_watch} w INNER JOIN
+      field_data_field_mediaitem_identifier i ON i.field_mediaitem_identifier_value = w.media_id
+      WHERE i.entity_id = :nid", array(':nid' => $node->id));
+    $watchers = $watchers->fetchAllAssoc('uid');
+    $friends_watched = array_intersect(array_keys($watchers), array_keys($friends));
+    if (empty($friends_watched)) {
+      return FALSE;
+    }
   }
   if (!is_true($prefs['3d'])) {
     if (isset($node->field_mediaitem_3d)) {
