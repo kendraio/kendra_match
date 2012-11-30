@@ -62,7 +62,7 @@ function _kendra_match_recommender_recommend_users($query = NULL, $filter = NULL
        INNER JOIN users ON users.uid=kendra_match_recommender_out_user_to_user.uid
        WHERE users.uid = %d and status = 1
        ORDER BY weight DESC, time DESC LIMIT %s, %s
-       ", $uid, $page, $page_size);
+       ", $uid, intval($page)*intval($page_size), intval($page_size));
 
   $result = db_query($sql);
 
@@ -128,33 +128,44 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   switch ($safe_sort) {
     case 'updated':
       $fields .= 'DISTINCT node.nid AS id';
+      $fields .= ', threed.field_mediaitem_3d_value';
       $order .= 'node.changed DESC';
       break;
 
     case 'newest':
       $fields .= 'DISTINCT node.nid AS id';
+      $fields .= ', threed.field_mediaitem_3d_value';
+      $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
       $order .= 'node.created DESC';
       break;
 
     case 'affinity':
       $fields .= 'DISTINCT node.nid AS id';
+      $fields .= ', threed.field_mediaitem_3d_value';
       $joins .= sprintf('LEFT JOIN {kendra_match_recommender_out_user_to_item} recommendations
       ON (recommendations.recommended_nid=node.nid AND (recommendations.uid = %d or recommendations.uid IS NULL))', $uid);
+
+      $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
+
       $order .= 'weight DESC, time DESC, node.changed DESC';
       break;
 
     case 'watched':
       $fields .= 'DISTINCT node.nid AS id';
+      $fields .= ', threed.field_mediaitem_3d_value';
       $joins .= ' INNER JOIN {field_data_field_mediaitem_identifier} mediaitem_identifier ON (mediaitem_identifier.entity_id=node.nid)';
       $joins .= ' LEFT JOIN {kendra_mediaitem_watch} watchlist ON (watchlist.media_id=mediaitem_identifier.field_mediaitem_identifier_value)';
+      $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
       $where .= ' GROUP BY nid';
-      $order .= 'count(id) DESC, node.changed DESC';
+      $order .= 'count(media_id) DESC, node.changed DESC';
       break;
 
     case 'rating':
     default:
       $fields .= 'DISTINCT node.nid AS id';
+      $fields .= ', threed.field_mediaitem_3d_value';
       $joins .= "LEFT JOIN {votingapi_cache} vv ON (vv.entity_id=node.nid AND (vv.function = 'average' OR vv.tag IS NULL))";
+      $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
       $order .= 'vv.value DESC, node.changed DESC';
       break;
 
@@ -163,8 +174,8 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $sql = sprintf("SELECT %s , node.uid as uid FROM %s %s
       WHERE %s
       ORDER BY %s
-      LIMIT %s, %s
-      ", $fields, $from, $joins, $where, $order, $page, $page_size);
+      LIMIT %d, %d
+      ", $fields, $from, $joins, $where, $order, intval($page)*intval($page_size), intval($page_size));
 
   $search_results = db_query($sql);
 
@@ -245,21 +256,14 @@ function _kendra_match_recommender_filter_content_by_prefs(&$node, &$prefs) {
     }
   }
   if (!is_true($prefs['3d'])) {
-    if (isset($node->field_mediaitem_3d)) {
-      $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if (!is_true($val)) {
-        return FALSE;
-      }
+    if($node->field_mediaitem_3d_value == 'Yes') {
+      return FALSE;
     }
   }
   if (is_true($prefs['3d-only'])) {
-    if (isset($node->field_mediaitem_3d)) {
-      $val = _drupal_object_get_value($node->field_mediaitem_3d);
-      if (!is_true($val)) {
-        return FALSE;
-      }
-    }
-    else {
+    if($node->field_mediaitem_3d_value == 'Yes') {
+      return TRUE;
+    } else {
       return FALSE;
     }
   }
