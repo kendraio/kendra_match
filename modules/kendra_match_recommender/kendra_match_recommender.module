@@ -225,7 +225,7 @@ function _kendra_match_recommender_refresh_user_recommendations($uid = NULL) {
 		} catch (Exception $e){
 			watchdog_exception('mahout', $e);
 		}
-		return $data;
+		return array();
 	} else {
 		watchdog('mahout', 'failed to contact mahout: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
 	}
