@@ -160,7 +160,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       
       	$order .= 'weight DESC, time DESC, node.changed DESC';
       	
-      	_kendra_match_recommender_get_user_recommendations($uid);
+      	_kendra_match_recommender_refresh_user_recommendations($uid);
       	
       	break;
       
@@ -202,12 +202,28 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   return $results;
 }
 
-function _kendra_match_recommender_get_user_recommendations($uid) {
-	$url = "http://localhost:7080/recommend/{$uid}";
+function _kendra_match_recommender_refresh_user_recommendations($uid = NULL) {
+	global $user;
+	$uid = (empty($uid))?$user->uid:$uid;
+	
+	$url = "http://localhost:7080/recommend/{$uid}?howMany=50&considerKnownItems=true";
 	$response = drupal_http_request($url);
 	if ($response->code == 200) {
-		$data = json_decode($response->data);
-		watchdog('mahout', 'Mahout: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
+		$recommendations = json_decode($response->data);
+		watchdog('mahout', 'Mahout Data: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
+		try {
+			db_query("DELETE FROM {kendra_match_recommender_out_user_to_item} WHERE uid = :uid", array(":uid" => intval($uid)));
+			
+			$query = db_insert('kendra_match_recommender_out_user_to_item');
+			$query->fields(array('uid','recommended_nid','weight','source'));
+			foreach ($recommendations as $recommendation) {
+				list($item_id, $weight) = $recommendation;
+				$query->values(array($uid,$item_id,$weight,'implicit'));
+			}
+			$query->execute();
+		} catch (Exception $e){
+			watchdog_exception('mahout', $e);
+		}
 		return $data;
 	} else {
 		watchdog('mahout', 'failed to contact mahout: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
