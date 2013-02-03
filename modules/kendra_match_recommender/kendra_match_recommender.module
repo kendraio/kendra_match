@@ -160,7 +160,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       
       	$order .= 'weight DESC, time DESC, node.changed DESC';
       	
-      	_kendra_match_recommender_refresh_user_recommendations($uid);
+      	_kendra_match_recommender_refresh_user_recommendations($uid,!empty($safe_query));
       	
       	break;
       
@@ -202,12 +202,12 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   return $results;
 }
 
-function _kendra_match_recommender_refresh_user_recommendations($uid = NULL) {
+function _kendra_match_recommender_refresh_user_recommendations($uid = NULL, $considerKnownItems = FALSE) {
 	global $user;
 	$uid = (empty($uid))?$user->uid:$uid;
 	
-	//$url = "http://localhost:7080/recommend/{$uid}?howMany=50&considerKnownItems=true";
-	$url = "http://localhost:7080/recommend/{$uid}?howMany=50";
+	$url = "http://localhost:7080/recommend/{$uid}?howMany=50". (($considerKnownItems)?"&considerKnownItems=true":"");
+	//$url = "http://localhost:7080/recommend/{$uid}?howMany=50";
 	$response = drupal_http_request($url);
 	if ($response->code == 200) {
 		$recommendations = json_decode($response->data);
