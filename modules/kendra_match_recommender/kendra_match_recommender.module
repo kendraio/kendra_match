@@ -139,17 +139,31 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $order .= 'node.created DESC';
       break;
 
-    case 'affinity':
+    case 'affinity_old':
       $fields .= 'DISTINCT node.nid AS id';
       $fields .= ', threed.field_mediaitem_3d_value';
-      $joins .= sprintf('LEFT JOIN {kendra_match_recommender_out_user_to_item} recommendations
-      ON (recommendations.recommended_nid=node.nid AND (recommendations.uid = %d or recommendations.uid IS NULL))', $uid);
+      $joins .= 'LEFT JOIN {kendra_match_recommender_out_user_to_item} recommendations ON (recommendations.recommended_nid=node.nid';
+      $joins .= sprintf(' AND (recommendations.uid = %d or recommendations.uid IS NULL))', $uid);
       
       $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
       
       $order .= 'weight DESC, time DESC, node.changed DESC';
       break;
 
+	case 'affinity':
+		$fields .= 'DISTINCT node.nid AS id';
+      	$fields .= ', threed.field_mediaitem_3d_value';
+      	$joins .= 'LEFT JOIN {kendra_match_recommender_out_user_to_item} recommendations ON (recommendations.recommended_nid=node.nid';
+      	$joins .= sprintf(' AND (recommendations.uid = %d or recommendations.uid IS NULL))', $uid);
+      
+      	$joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
+      
+      	$order .= 'weight DESC, time DESC, node.changed DESC';
+      	
+      	_kendra_match_recommender_get_user_recommendations($uid);
+      	
+      	break;
+      
     case 'watched':
       $fields .= 'DISTINCT node.nid AS id';
       $fields .= ', threed.field_mediaitem_3d_value';
@@ -158,7 +172,6 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       $joins .= ' LEFT JOIN {field_data_field_mediaitem_3d} threed ON (threed.entity_id=node.nid)';
       $where .= ' GROUP BY nid';
       $order .= 'count(media_id) DESC, node.changed DESC';
-      //$order .= 'count(id) DESC, node.changed DESC';
       break;
 
     case 'rating':
@@ -188,6 +201,20 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
 
   return $results;
 }
+
+function _kendra_match_recommender_get_user_recommendations($uid) {
+	$url = "http://localhost:7080/recommend/{$uid}";
+	$response = drupal_http_request($url);
+	if ($response->code == 200) {
+		$data = json_decode($response->data);
+		watchdog('mahout', 'Mahout: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
+		return $data;
+	} else {
+		watchdog('mahout', 'failed to contact mahout: ' . print_r($response, TRUE) . ' for ' . print_r($uid, TRUE));
+	}
+	return array();
+}
+
 
 /**
  * search users
