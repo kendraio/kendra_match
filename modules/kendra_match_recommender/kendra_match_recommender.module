@@ -248,9 +248,9 @@ function _kendra_match_recommender_search_users($query = NULL, $filter = NULL, $
   
   foreach ($search_results as $search_result) {
   	//$uids[] = $node->recommended_uid;
-  	$search_result->name = $search_result->title;
-  	$search_result->affinity = 0;
-  	unset($search_result->title);
+  	$search_result['name'] = $search_result['title'];
+  	$search_result['affinity'] = 0;
+  	unset($search_result['title']);
   }
   
   return $search_results;
