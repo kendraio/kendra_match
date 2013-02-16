@@ -99,6 +99,21 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $where     = "(node.status=1 OR node.uid=$uid)";
   $order     = '';
 
+  $premium_access = false;
+  if(user_access("primetel premium content access")){
+    $premium_access = true;
+  }
+  else {
+    $premium_access = false;
+  }
+  //$premium_user = user_load_by_name("Primetel");
+  //$premium_uid = $premium_user->uid;
+  $premium_uid = 166;
+  $premium_filter = "";
+  if(!$premium_access){
+    $premium_filter = " AND n.uid != ".$premium_uid." ";
+  }
+  
   // @todo fix NULL parameters passed via querystring
   if (!$page) $page = 0;
   if (!$page_size) $page_size = 10;
@@ -125,6 +140,8 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
     }
   }
 
+  $where .= $premium_filter;
+  
   switch ($safe_sort) {
     case 'updated':
       $fields .= 'DISTINCT node.nid AS id';
