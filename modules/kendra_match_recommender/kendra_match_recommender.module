@@ -111,7 +111,7 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
   $premium_uid = 166;
   $premium_filter = "";
   if(!$premium_access){
-    $premium_filter = " AND n.uid != ".$premium_uid." ";
+    $premium_filter = " AND node.uid != ".$premium_uid." ";
   }
   
   // @todo fix NULL parameters passed via querystring
@@ -207,6 +207,8 @@ function _kendra_match_recommender_recommend_content($query = NULL, $filter = NU
       ORDER BY %s
       LIMIT %d, %d
       ", $fields, $from, $joins, $where, $order, intval($page)*intval($page_size), intval($page_size));
+
+  //watchdog('search','sql'.$sql);
 
   $search_results = db_query($sql);
 
